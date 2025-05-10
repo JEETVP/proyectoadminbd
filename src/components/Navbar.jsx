@@ -1,10 +1,17 @@
+// src/components/Navbar.jsx
+
 import React, { useState } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Fragment } from "react";
+import { Link, useLocation } from "react-router-dom"; // Importa useLocation
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation(); // Obtener la ubicación actual
+
+  // Función para verificar si una ruta coincide con la ruta actual
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav className="bg-[#003366] text-white">
@@ -20,30 +27,55 @@ const Navbar = () => {
             </div>
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
-                <a
-                  href="#"
-                  className="text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                {/* Cerrar Sesión */}
+                <Link
+                  to="/login" // Cambia esta ruta según tu lógica de cierre de sesión
+                  className={`text-red-300 hover:bg-red-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive("/login") ? "bg-red-500 text-white" : ""
+                  }`}
                 >
-                  Inicio
-                </a>
-                <a
-                  href="#"
-                  className="text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                  Cerrar Sesión
+                </Link>
+
+                {/* Usuarios */}
+                <Link
+                  to="/usuarios"
+                  className={`text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive("/usuarios") ? "bg-[#CC9900] text-white" : ""
+                  }`}
                 >
                   Usuarios
-                </a>
-                <a
-                  href="#"
-                  className="text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                </Link>
+
+                {/* Trámites */}
+                <Link
+                  to="/tramites"
+                  className={`text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive("/tramites") ? "bg-[#CC9900] text-white" : ""
+                  }`}
                 >
                   Trámites
-                </a>
-                <a
-                  href="/create-appointment"
-                  className="bg-[#CC9900] text-white px-3 py-2 rounded-md text-sm font-medium"
+                </Link>
+
+                {/* Crear Cita */}
+                <Link
+                  to="/create-appointment"
+                  className={`text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive("/create-appointment") ? "bg-[#CC9900] text-white" : ""
+                  }`}
                 >
                   Crear Cita
-                </a>
+                </Link>
+
+                {/* Administradores */}
+                <Link
+                  to="/admin-dashboard"
+                  className={`text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive("/admin-dashboard") ? "bg-[#CC9900] text-white" : ""
+                  }`}
+                >
+                  Administradores
+                </Link>
               </div>
             </div>
           </div>
@@ -78,30 +110,55 @@ const Navbar = () => {
       >
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <a
-              href="#"
-              className="text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+            {/* Cerrar Sesión */}
+            <Link
+              to="/login" // Cambia esta ruta según tu lógica de cierre de sesión
+              className={`text-red-300 hover:bg-red-500 hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
+                isActive("/login") ? "bg-red-500 text-white" : ""
+              }`}
             >
-              Inicio
-            </a>
-            <a
-              href="#"
-              className="text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              Cerrar Sesión
+            </Link>
+
+            {/* Usuarios */}
+            <Link
+              to="/usuarios"
+              className={`text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
+                isActive("/usuarios") ? "bg-[#CC9900] text-white" : ""
+              }`}
             >
               Usuarios
-            </a>
-            <a
-              href="#"
-              className="text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+            </Link>
+
+            {/* Trámites */}
+            <Link
+              to="/tramites"
+              className={`text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
+                isActive("/tramites") ? "bg-[#CC9900] text-white" : ""
+              }`}
             >
               Trámites
-            </a>
-            <a
-              href="/create-appointment"
-              className="bg-[#CC9900] text-white block px-3 py-2 rounded-md text-base font-medium"
+            </Link>
+
+            {/* Crear Cita */}
+            <Link
+              to="/create-appointment"
+              className={`text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
+                isActive("/create-appointment") ? "bg-[#CC9900] text-white" : ""
+              }`}
             >
               Crear Cita
-            </a>
+            </Link>
+
+            {/* Administradores */}
+            <Link
+              to="/admin-dashboard"
+              className={`text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
+                isActive("/admin-dashboard") ? "bg-[#CC9900] text-white" : ""
+              }`}
+            >
+              Administradores
+            </Link>
           </div>
         </div>
       </Transition>
