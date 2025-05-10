@@ -39,12 +39,12 @@ const Navbar = () => {
 
                 {/* Usuarios */}
                 <Link
-                  to="/usuarios"
+                  to="/usuario"
                   className={`text-gray-300 hover:bg-[#CC9900] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
                     isActive("/usuarios") ? "bg-[#CC9900] text-white" : ""
                   }`}
                 >
-                  Usuarios
+                  Usuario
                 </Link>
 
                 {/* Trámites */}
@@ -122,12 +122,12 @@ const Navbar = () => {
 
             {/* Usuarios */}
             <Link
-              to="/usuarios"
+              to="/usuario"
               className={`text-gray-300 hover:bg-[#CC9900] hover:text-white block px-3 py-2 rounded-md text-base font-medium ${
                 isActive("/usuarios") ? "bg-[#CC9900] text-white" : ""
               }`}
             >
-              Usuarios
+              Usuario
             </Link>
 
             {/* Trámites */}

@@ -9,19 +9,16 @@ const Tramites = () => {
   const [usuarios, setUsuarios] = useState([]);
 
   useEffect(() => {
-    // Obtener trámites desde el backend
     fetch("/api/tramites")
       .then((response) => response.json())
       .then((data) => setTramites(data))
       .catch((error) => console.error("Error al obtener trámites:", error));
 
-    // Obtener tipos de trámites desde el backend
     fetch("/api/tipo-tramites")
       .then((response) => response.json())
       .then((data) => setTipoTramites(data))
       .catch((error) => console.error("Error al obtener tipos de trámites:", error));
 
-    // Obtener usuarios desde el backend
     fetch("/api/usuarios")
       .then((response) => response.json())
       .then((data) => setUsuarios(data))
@@ -33,41 +30,40 @@ const Tramites = () => {
       <Navbar />
 
       <main className="flex-1 p-8">
-        <h1 className="text-2xl font-bold mb-4 text-[#003366]">Gestión de Trámites</h1>
+        <h1 className="text-2xl font-bold mb-6 text-[#003366]">Gestión de Trámites</h1>
 
-        {/* Lista de Trámites */}
-        <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4 text-[#003366]">Lista de Trámites</h2>
-          <table className="w-full border-collapse bg-white">
-            <thead>
-              <tr>
-                <th className="border border-gray-300 px-4 py-2">Código Trámite</th>
-                <th className="border border-gray-300 px-4 py-2">Usuario</th>
-                <th className="border border-gray-300 px-4 py-2">Tipo de Trámite</th>
-                <th className="border border-gray-300 px-4 py-2">Estado</th>
-                <th className="border border-gray-300 px-4 py-2">Fecha Solicitud</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tramites.map((tramite) => (
-                <tr key={tramite._id}>
-                  <td className="border border-gray-300 px-4 py-2">{tramite.codigoTramite}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {usuarios.find(user => user._id === tramite.usuario_id)?.nombre}{" "}
-                    {usuarios.find(user => user._id === tramite.usuario_id)?.apellidos}{" "}
-                    ({usuarios.find(user => user._id === tramite.usuario_id)?.contacto.email})
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {tipoTramites.find(tipo => tipo._id === tramite.tipoTramite_id)?.nombre}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">{tramite.estado}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {new Date(tramite.fechaSolicitud).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Grid de Tarjetas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {tramites.map((tramite) => {
+            const usuario = usuarios.find((user) => user._id === tramite.usuario_id);
+            const tipoTramite = tipoTramites.find((tipo) => tipo._id === tramite.tipoTramite_id);
+
+            return (
+              <div
+                key={tramite._id}
+                className="bg-white shadow-md rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow"
+              >
+                <h2 className="text-lg font-semibold text-[#003366] mb-2">
+                  Código: {tramite.codigoTramite}
+                </h2>
+                <p className="text-sm text-gray-700 mb-1">
+                  <strong>Usuario:</strong> {usuario?.nombre} {usuario?.apellidos}
+                </p>
+                <p className="text-sm text-gray-700 mb-1">
+                  <strong>Email:</strong> {usuario?.contacto?.email}
+                </p>
+                <p className="text-sm text-gray-700 mb-1">
+                  <strong>Tipo de Trámite:</strong> {tipoTramite?.nombre}
+                </p>
+                <p className="text-sm text-gray-700 mb-1">
+                  <strong>Estado:</strong> {tramite.estado}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Fecha:</strong> {new Date(tramite.fechaSolicitud).toLocaleDateString()}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>
