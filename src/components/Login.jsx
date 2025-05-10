@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Eye, EyeOff, UserRound, KeyRound, ArrowRightCircle, AlertCircle, CheckCircle2 } from 'lucide-react';
 import QRScanner from './QRScanner';
+import { useNavigate } from 'react-router-dom';
+
 
 function Login() {
+  const navigate = useNavigate();
   // Estados para manejo de formulario
   const [numeroIdentificacion, setNumeroIdentificacion] = useState('');
   const [password, setPassword] = useState('');
@@ -22,51 +25,58 @@ function Login() {
 
   // Función de login con credenciales
   const handleLogin = async () => {
-    if (!numeroIdentificacion || !password) {
-      setMensaje({ tipo: 'error', texto: 'Por favor complete todos los campos' });
+  if (!numeroIdentificacion || !password) {
+    setMensaje({ tipo: 'error', texto: 'Por favor complete todos los campos' });
+    return;
+  }
+
+  setCargando(true);
+  setMensaje({ tipo: '', texto: '' });
+
+  try {
+    const res = await fetch("https://backendbernyfix.onrender.com/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: numeroIdentificacion,
+        password,
+      }),
+    });
+
+    setCargando(false);
+
+    if (!res.ok) {
+      const error = await res.json();
+      setMensaje({ tipo: 'error', texto: `Error de autenticación: ${error.mensaje}` });
       return;
     }
 
-    setCargando(true);
-    setMensaje({ tipo: '', texto: '' });
+    const data = await res.json();
 
-    try {
-      const res = await fetch("https://backendbernyfix.onrender.com/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: numeroIdentificacion,
-          password,
-        }),
-      });
+    // ✅ Guarda el token en localStorage
+    localStorage.setItem("token", data.token);
 
-      setCargando(false);
+    // ✅ Verificación por consola
+    console.log("Token guardado en localStorage:", localStorage.getItem("token"));
 
-      if (!res.ok) {
-        const error = await res.json();
-        setMensaje({ tipo: 'error', texto: `Error de autenticación: ${error.mensaje}` });
-        return;
-      }
+    // ✅ Mensaje opcional
+    setMensaje({ tipo: 'exito', texto: `Bienvenido, ${data.usuario.nombre}` });
 
-      const data = await res.json();
-      setMensaje({ tipo: 'exito', texto: `Bienvenido, ${data.usuario.nombre}` });
+    // Limpia campos
+    setNumeroIdentificacion('');
+    setPassword('');
 
-      // Reset form fields
-      setNumeroIdentificacion('');
-      setPassword('');
+    // ✅ Redirige a la pantalla de trámites
+    navigate("/tramites");
 
-      // Guardar token o redirigir
-      // localStorage.setItem("token", data.token);
-      // navigate("/dashboard");
-
-    } catch (err) {
-      setCargando(false);
-      setMensaje({ tipo: 'error', texto: 'Error al conectar con el servidor. Por favor intente más tarde.' });
-      console.error("Error durante login:", err);
-    }
-  };
+  } catch (err) {
+    setCargando(false);
+    setMensaje({ tipo: 'error', texto: 'Error al conectar con el servidor. Por favor intente más tarde.' });
+    console.error("Error durante login:", err);
+  }
+};
 
   // Manejo de escaneo QR - Ahora directo sin contraseña
   const handleQRScanned = async (decodedText) => {
