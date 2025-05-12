@@ -178,7 +178,7 @@ const AdminDashboard = () => {
               <tr>
                 <th className="border border-gray-300 px-4 py-2">Usuario</th>
                 <th className="border border-gray-300 px-4 py-2">Tipo de Trámite</th>
-                <th className="border border-gray-300 px-4 py-2">Fecha de Creación</th>
+                <th className="border border-gray-300 px-4 py-2">Fecha de Cita</th>
                 <th className="border border-gray-300 px-4 py-2">Acciones</th>
               </tr>
             </thead>

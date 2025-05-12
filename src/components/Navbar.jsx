@@ -20,8 +20,8 @@ const Navbar = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <img
-                className="h-8 w-8"
-                src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500 "
+                className="h-12 w-15"
+                src="https://pbr.puebla.gob.mx/images/2017/logoGEP.png"
                 alt="Workflow"
               />
             </div>
