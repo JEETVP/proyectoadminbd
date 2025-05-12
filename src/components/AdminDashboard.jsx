@@ -85,6 +85,14 @@ const AdminDashboard = () => {
     }));
   };
 
+  // Manejador para eliminar un documento
+  const removeDocument = (index) => {
+    setNewTramite((prevData) => ({
+      ...prevData,
+      documentos: prevData.documentos.filter((_, i) => i !== index),
+    }));
+  };
+
   return (
     <div className="bg-[#F5F5F5] min-h-screen flex flex-col">
       <Navbar />
@@ -115,6 +123,29 @@ const AdminDashboard = () => {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Sección de Citas Creadas */}
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 text-[#003366]">Citas Creadas</h2>
+          <table className="w-full border-collapse bg-white">
+            <thead>
+              <tr>
+                <th className="border border-gray-300 px-4 py-2">Usuario</th>
+                <th className="border border-gray-300 px-4 py-2">Fecha de Creación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {citas.map((cita, index) => (
+                <tr key={index}>
+                  <td className="border border-gray-300 px-4 py-2">{cita.usuario}</td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    {new Date(cita.fecha).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Botones para Crear Usuario y Trámite */}
@@ -268,21 +299,15 @@ const AdminDashboard = () => {
                   <label htmlFor="usuario_id" className="block text-sm font-medium text-[#003366]">
                     Usuario:
                   </label>
-                  <select
+                  <input
+                    type="text"
                     id="usuario_id"
                     name="usuario_id"
                     value={newTramite.usuario_id}
                     onChange={handleTramiteChange}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
                     required
-                  >
-                    <option value="">Selecciona un usuario</option>
-                    {usuarios.map((usuario) => (
-                      <option key={usuario.email} value={usuario.email}>
-                        {usuario.nombre} ({usuario.email})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label htmlFor="tipoTramite_id" className="block text-sm font-medium text-[#003366]">
@@ -319,8 +344,46 @@ const AdminDashboard = () => {
                     <option value="rechazado">Rechazado</option>
                   </select>
                 </div>
+
+                {/* Documentos */}
                 <div>
                   <h3 className="text-md font-medium mb-2 text-[#003366]">Documentos</h3>
+                  {newTramite.documentos.map((doc, index) => (
+                    <div key={index} className="mb-4 flex space-x-2">
+                      <div className="w-1/2">
+                        <label htmlFor={`tipo-${index}`} className="block text-sm font-medium text-[#003366]">
+                          Descripción:
+                        </label>
+                        <input
+                          type="text"
+                          id={`tipo-${index}`}
+                          name="tipo"
+                          placeholder="Descripción del documento"
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                          required
+                        />
+                      </div>
+                      <div className="w-1/2">
+                        <label htmlFor={`archivo-${index}`} className="block text-sm font-medium text-[#003366]">
+                          Archivo:
+                        </label>
+                        <input
+                          type="file"
+                          id={`archivo-${index}`}
+                          name="archivo"
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                          required
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
                   <button
                     type="button"
                     onClick={addDocument}
@@ -329,9 +392,10 @@ const AdminDashboard = () => {
                     Agregar Documento
                   </button>
                 </div>
+
                 <button
                   type="submit"
-                  className="bg-[#CC9900] hover:bg-[#B38600] text-white font-bold py-2 px-4 rounded"
+                  className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
                 >
                   Guardar Trámite
                 </button>
