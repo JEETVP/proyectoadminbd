@@ -7,6 +7,8 @@ const AdminDashboard = () => {
   // Estado para mostrar/ocultar los modales
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [showCreateTramiteForm, setShowCreateTramiteForm] = useState(false);
+  const [showEditCitaForm, setShowEditCitaForm] = useState(false);
+  const [editCitaIndex, setEditCitaIndex] = useState(null);
 
   // Datos simulados (sin backend)
   const usuarios = [
@@ -19,10 +21,10 @@ const AdminDashboard = () => {
     { tipo: "Trámite 2", estado: "completado" },
   ];
 
-  const citas = [
-    { usuario: "Usuario 1", fecha: new Date() },
-    { usuario: "Usuario 2", fecha: new Date() },
-  ];
+  const [citas, setCitas] = useState([
+    { usuario: "Usuario 1", fecha: new Date().toISOString().slice(0, 16), tramite: "Trámite 1" },
+    { usuario: "Usuario 2", fecha: new Date().toISOString().slice(0, 16), tramite: "Trámite 2" },
+  ]);
 
   // Estado para los formularios
   const [newUsuario, setNewUsuario] = useState({
@@ -42,6 +44,12 @@ const AdminDashboard = () => {
     documentos: [],
   });
 
+  const [editCita, setEditCita] = useState({
+    usuario: "",
+    fecha: "",
+    tramite: "",
+  });
+
   // Funciones para manejar los modales
   const handleShowCreateUserForm = () => {
     setShowCreateUserForm(true);
@@ -57,6 +65,17 @@ const AdminDashboard = () => {
 
   const handleHideCreateTramiteForm = () => {
     setShowCreateTramiteForm(false);
+  };
+
+  const handleShowEditCitaForm = (index) => {
+    setEditCitaIndex(index);
+    setEditCita(citas[index]);
+    setShowEditCitaForm(true);
+  };
+
+  const handleHideEditCitaForm = () => {
+    setShowEditCitaForm(false);
+    setEditCitaIndex(null);
   };
 
   // Manejador de cambio para el formulario de usuario
@@ -77,6 +96,15 @@ const AdminDashboard = () => {
     }));
   };
 
+  // Manejador de cambio para el formulario de edición de cita
+  const handleEditCitaChange = (e) => {
+    const { name, value } = e.target;
+    setEditCita((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
   // Manejador para agregar documentos al trámite
   const addDocument = () => {
     setNewTramite((prevData) => ({
@@ -91,6 +119,23 @@ const AdminDashboard = () => {
       ...prevData,
       documentos: prevData.documentos.filter((_, i) => i !== index),
     }));
+  };
+
+  // Manejador para eliminar una cita
+  const deleteCita = (index) => {
+    setCitas((prevCitas) => prevCitas.filter((_, i) => i !== index));
+  };
+
+  // Manejador para guardar una cita editada
+  const saveEditCita = () => {
+    if (editCitaIndex !== null) {
+      setCitas((prevCitas) =>
+        prevCitas.map((cita, index) =>
+          index === editCitaIndex ? editCita : cita
+        )
+      );
+      handleHideEditCitaForm();
+    }
   };
 
   return (
@@ -132,15 +177,34 @@ const AdminDashboard = () => {
             <thead>
               <tr>
                 <th className="border border-gray-300 px-4 py-2">Usuario</th>
+                <th className="border border-gray-300 px-4 py-2">Tipo de Trámite</th>
                 <th className="border border-gray-300 px-4 py-2">Fecha de Creación</th>
+                <th className="border border-gray-300 px-4 py-2">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {citas.map((cita, index) => (
                 <tr key={index}>
                   <td className="border border-gray-300 px-4 py-2">{cita.usuario}</td>
+                  <td className="border border-gray-300 px-4 py-2">{cita.tramite}</td>
                   <td className="border border-gray-300 px-4 py-2">
                     {new Date(cita.fecha).toLocaleDateString()}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => handleShowEditCitaForm(index)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteCita(index)}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                    >
+                      Eliminar
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -322,8 +386,11 @@ const AdminDashboard = () => {
                     required
                   >
                     <option value="">Selecciona un tipo de trámite</option>
-                    <option value="tramite1">Tipo de Trámite 1</option>
-                    <option value="tramite2">Tipo de Trámite 2</option>
+                    {tramites.map((tramite) => (
+                      <option key={tramite.tipo} value={tramite.tipo}>
+                        {tramite.tipo}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -344,7 +411,6 @@ const AdminDashboard = () => {
                     <option value="rechazado">Rechazado</option>
                   </select>
                 </div>
-
                 {/* Documentos */}
                 <div>
                   <h3 className="text-md font-medium mb-2 text-[#003366]">Documentos</h3>
@@ -359,6 +425,16 @@ const AdminDashboard = () => {
                           id={`tipo-${index}`}
                           name="tipo"
                           placeholder="Descripción del documento"
+                          value={doc.tipo}
+                          onChange={(e) => {
+                            const updatedDocs = newTramite.documentos.map((d, i) =>
+                              i === index ? { ...d, tipo: e.target.value } : d
+                            );
+                            setNewTramite((prevData) => ({
+                              ...prevData,
+                              documentos: updatedDocs,
+                            }));
+                          }}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
                           required
                         />
@@ -371,6 +447,15 @@ const AdminDashboard = () => {
                           type="file"
                           id={`archivo-${index}`}
                           name="archivo"
+                          onChange={(e) => {
+                            const updatedDocs = newTramite.documentos.map((d, i) =>
+                              i === index ? { ...d, archivo: e.target.files[0] } : d
+                            );
+                            setNewTramite((prevData) => ({
+                              ...prevData,
+                              documentos: updatedDocs,
+                            }));
+                          }}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
                           required
                         />
@@ -392,7 +477,6 @@ const AdminDashboard = () => {
                     Agregar Documento
                   </button>
                 </div>
-
                 <button
                   type="submit"
                   className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
@@ -402,6 +486,79 @@ const AdminDashboard = () => {
                 <button
                   type="button"
                   onClick={handleHideCreateTramiteForm}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                >
+                  Cancelar
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Formulario de Editar Cita (Modal) */}
+        {showEditCitaForm && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded shadow max-w-lg w-full">
+              <h2 className="text-lg font-bold mb-4 text-[#003366]">Editar Cita</h2>
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                <div>
+                  <label htmlFor="usuario" className="block text-sm font-medium text-[#003366]">
+                    Usuario:
+                  </label>
+                  <input
+                    type="text"
+                    id="usuario"
+                    name="usuario"
+                    value={editCita.usuario}
+                    onChange={handleEditCitaChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="tramite" className="block text-sm font-medium text-[#003366]">
+                    Tipo de Trámite:
+                  </label>
+                  <select
+                    id="tramite"
+                    name="tramite"
+                    value={editCita.tramite}
+                    onChange={handleEditCitaChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                    required
+                  >
+                    <option value="">Selecciona un tipo de trámite</option>
+                    {tramites.map((tramite) => (
+                      <option key={tramite.tipo} value={tramite.tipo}>
+                        {tramite.tipo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="fecha" className="block text-sm font-medium text-[#003366]">
+                    Fecha y Hora:
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="fecha"
+                    name="fecha"
+                    value={editCita.fecha}
+                    onChange={handleEditCitaChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  onClick={saveEditCita}
+                  className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Guardar Cambios
+                </button>
+                <button
+                  type="button"
+                  onClick={handleHideEditCitaForm}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
                 >
                   Cancelar
