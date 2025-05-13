@@ -117,10 +117,12 @@ function Login() {
       const data = await res.json();
       setMensaje({ tipo: 'exito', texto: `Bienvenido, ${data.usuario.nombre}` });
       console.log("Login exitoso:", data);
+
+      // ✅ Mensaje opcional
+      setMensaje({ tipo: 'exito', texto: `Bienvenido, ${data.usuario.nombre}` });
       
-      // Aquí podrías guardar el token o redirigir
-      // localStorage.setItem("token", data.token);
-      // navigate("/dashboard");
+      // ✅ Redirige a la pantalla de trámites
+      navigate("/tramites");
       
     } catch (err) {
       setCargando(false);
