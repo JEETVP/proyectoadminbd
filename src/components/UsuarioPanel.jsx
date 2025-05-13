@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, CheckCircle, AlertCircle, Clock, FileText } from 'lucide-react';
+import { Calendar, Clock, FileText } from 'lucide-react';
 import Navbar from "./Navbar";
-
+import { useNavigate } from "react-router-dom"; 
 const API_BASE = "https://backendbernyfix.onrender.com/api";
 
+
 const UserProfile = () => {
-  const [userData, setUserData] = useState({
-    nombre: "",
-    apellidos: "",
-    email: "",
-    telefono: "",
-  });
   const [misTramites, setMisTramites] = useState([]);
-  const [mensaje, setMensaje] = useState("");
-  const [tipoMensaje, setTipoMensaje] = useState("");
   const [isLoadingTramites, setIsLoadingTramites] = useState(false);
   const [tiposTramite, setTiposTramite] = useState([]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,8 +18,7 @@ const UserProfile = () => {
         const token = localStorage.getItem("token");
         
         if (!token) {
-          setMensaje("No se ha encontrado el token de autenticación.");
-          setTipoMensaje("error");
+          console.error("No se ha encontrado el token de autenticación.");
           return;
         }
 
@@ -52,36 +46,12 @@ const UserProfile = () => {
         setIsLoadingTramites(false);
       } catch (err) {
         console.error("Error al cargar datos:", err);
-        setMensaje("Error al cargar los datos.");
-        setTipoMensaje("error");
         setIsLoadingTramites(false);
       }
     };
 
     fetchData();
   }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const token = localStorage.getItem("token");
-      
-      // Aquí iría el código para actualizar el perfil
-      
-      setMensaje("Perfil actualizado correctamente");
-      setTipoMensaje("success");
-    } catch (error) {
-      console.error("Error al actualizar el perfil:", error);
-      setMensaje("Error al actualizar el perfil");
-      setTipoMensaje("error");
-    }
-  };
 
   // Función para actualizar la lista de trámites
   const obtenerMisTramites = async () => {
@@ -126,23 +96,39 @@ const UserProfile = () => {
   // Obtener color según estado
   const getEstadoColor = (estado) => {
     switch (estado?.toLowerCase()) {
-      case 'completado':
+      case 'completada':
         return 'bg-green-100 text-green-800';
-      case 'en proceso':
+      case 'programada':
         return 'bg-yellow-100 text-yellow-800';
-      case 'pendiente':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelado':
+      case 'cancelada':
         return 'bg-red-100 text-red-800';
-      default:
+      case 'no_asistio':
         return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  // Traducir estado para visualización
+  const traducirEstado = (estado) => {
+    switch (estado?.toLowerCase()) {
+      case 'completada':
+        return 'Completada';
+      case 'programada':
+        return 'Programada';
+      case 'cancelada':
+        return 'Cancelada';
+      case 'no_asistio':
+        return 'No Asistió';
+      default:
+        return estado || 'Pendiente';
     }
   };
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen flex flex-col">
       <Navbar />
-
+    
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-800">Mi Perfil</h1>
 
@@ -222,12 +208,12 @@ const UserProfile = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center">
                             <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                            {formatearFecha(tramite.fechaHora)}
+                            {formatearFecha(tramite.cita?.fechaHora)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(tramite.estado)}`}>
-                            {tramite.estado || 'Pendiente'}
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(tramite.cita?.estado)}`}>
+                            {traducirEstado(tramite.cita?.estado)}
                           </span>
                         </td>
                       </tr>
@@ -236,67 +222,6 @@ const UserProfile = () => {
                 </table>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Formulario de edición */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-            <div className="flex items-center">
-              <div className="bg-white/20 p-2 rounded-lg mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Información Personal</h3>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {mensaje && (
-              <div className={`mb-6 p-4 rounded-lg flex items-center ${tipoMensaje === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-                {tipoMensaje === 'success' ? (
-                  <CheckCircle className="mr-3 flex-shrink-0 text-green-500" size={20} />
-                ) : (
-                  <AlertCircle className="mr-3 flex-shrink-0 text-red-500" size={20} />
-                )}
-                <p className="font-medium">{mensaje}</p>
-              </div>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { id: "nombre", label: "Nombre", type: "text" },
-                  { id: "apellidos", label: "Apellidos", type: "text" },
-                  { id: "email", label: "Correo Electrónico", type: "email" },
-                  { id: "telefono", label: "Teléfono", type: "text" }
-                ].map((campo) => (
-                  <div key={campo.id}>
-                    <label htmlFor={campo.id} className="block text-sm font-medium text-gray-700 mb-1">
-                      {campo.label}
-                    </label>
-                    <input
-                      type={campo.type}
-                      id={campo.id}
-                      name={campo.id}
-                      value={userData[campo.id]}
-                      onChange={handleChange}
-                      className="block w-full px-4 py-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                ))}
-              </div>
-              
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       </div>

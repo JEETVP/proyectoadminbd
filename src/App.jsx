@@ -7,6 +7,7 @@ import Tramites from "./components/Tramites";
 import AdminDashboard from "./components/AdminDashboard";
 import UsuarioPanel from "./components/UsuarioPanel"; 
 
+
 function App() {
   return (
     <Router>
@@ -19,6 +20,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/usuario" element={<UsuarioPanel />} /> {/* ✅ Nueva ruta */}
         <Route path="*" element={<h1>Página no encontrada</h1>} />
+        
       </Routes>
     </Router>
   );
