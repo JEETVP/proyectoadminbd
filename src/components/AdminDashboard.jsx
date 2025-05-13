@@ -523,7 +523,7 @@ const AdminDashboard = () => {
         {/* Sección de Métricas */}
         <div className="mb-8">
           <h2 className="text-lg font-bold mb-4 text-[#003366]">Métricas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white shadow rounded p-4 text-center">
               <h3 className="text-xl font-medium mb-2">Número de Usuarios</h3>
               <span id="num-usuarios" className="text-2xl font-bold">
@@ -538,14 +538,6 @@ const AdminDashboard = () => {
                 {isLoading.tramites ? (
                   <div className="animate-pulse h-8 w-16 bg-gray-200 mx-auto rounded"></div>
                 ) : tramites.length}
-              </span>
-            </div>
-            <div className="bg-white shadow rounded p-4 text-center">
-              <h3 className="text-xl font-medium mb-2">Citas Creadas</h3>
-              <span id="num-citas" className="text-2xl font-bold">
-                {isLoading.citas ? (
-                  <div className="animate-pulse h-8 w-16 bg-gray-200 mx-auto rounded"></div>
-                ) : citas.length}
               </span>
             </div>
           </div>
@@ -599,13 +591,27 @@ const AdminDashboard = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            // Esta función podría manejarse en el futuro para editar trámites
-                            console.log("Editar trámite:", tramite._id);
+                            // Buscar la cita asociada a este trámite
+                            const citaDelTramite = citas.find(c => c.tramite_id === tramite._id);
+                            if (citaDelTramite) {
+                              // Si la cita existe, editar la cita existente
+                              handleShowEditCitaForm(citaDelTramite);
+                            } else {
+                              // Si no existe cita, crear una nueva con los datos del trámite
+                              setEditCitaId(null);
+                              setEditCita({
+                                usuario_id: tramite.usuario_id || "",
+                                tramite_id: tramite._id || "",
+                                fechaHora: tramite.cita?.fechaHora ? new Date(tramite.cita.fechaHora).toISOString().slice(0, 16) : "",
+                                estado: tramite.cita?.estado || "programada"
+                              });
+                              setShowEditCitaForm(true);
+                            }
                           }}
                           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
                           disabled={isLoading.tramites}
                         >
-                          Detalles
+                          Editar Cita
                         </button>
                       </td>
                     </tr>
