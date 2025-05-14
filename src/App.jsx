@@ -6,6 +6,7 @@ import CreateAppointment from "./components/CreateAppointment";
 import Tramites from "./components/Tramites";
 import AdminDashboard from "./components/AdminDashboard";
 import UsuarioPanel from "./components/UsuarioPanel"; 
+import UserList from "./components/UserList";
 
 
 function App() {
@@ -20,7 +21,8 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/usuario" element={<UsuarioPanel />} /> {/* ✅ Nueva ruta */}
         <Route path="*" element={<h1>Página no encontrada</h1>} />
-        
+        <Route path="/view" element={<UserList />} /> {/* ✅ Nueva ruta */}
+
       </Routes>
     </Router>
   );

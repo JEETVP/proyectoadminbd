@@ -3,6 +3,7 @@ import { Calendar, Clock, FileText } from 'lucide-react';
 import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom"; 
 const API_BASE = "https://backendbernyfix.onrender.com/api";
+import { Link } from 'react-router-dom';
 
 
 const UserProfile = () => {
@@ -128,7 +129,7 @@ const UserProfile = () => {
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen flex flex-col">
       <Navbar />
-    
+
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-800">Mi Perfil</h1>
 
