@@ -73,17 +73,32 @@ const UserProfile = () => {
     }
   };
 
-  // Formatear fecha para mejor visualización
+  // Formatear fecha para mostrarla exactamente como fue ingresada, sin ajustes de zona horaria
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return 'Fecha no disponible';
-    const fecha = new Date(fechaStr);
-    return fecha.toLocaleString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    
+    try {
+      // Crear objeto Date a partir del string UTC
+      const fecha = new Date(fechaStr);
+      
+      // Verificar si la fecha es válida
+      if (isNaN(fecha.getTime())) return 'Fecha inválida';
+      
+      // Al usar toLocaleString sin especificar timeZone, se usa la zona horaria local del navegador
+      // Este enfoque respeta la fecha/hora tal como fue ingresada originalmente
+      return fecha.toLocaleString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true, // Usar formato 12 horas (AM/PM)
+        timeZone: 'UTC' // Utilizar UTC para que no haya conversiones
+      });
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return 'Error en formato de fecha';
+    }
   };
 
   // Obtener nombre del tipo de trámite

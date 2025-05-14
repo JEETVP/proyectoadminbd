@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, CheckCircle, AlertCircle, Briefcase, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, CheckCircle, AlertCircle, Briefcase, Calendar as CalendarIcon, ChevronDown, Clock, Info } from 'lucide-react';
 import Navbar from './Navbar';
 
 const CrearTramite = () => {
@@ -11,6 +11,19 @@ const CrearTramite = () => {
   const [mensaje, setMensaje] = useState('');
   const [tipoMensaje, setTipoMensaje] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [fechaMinima, setFechaMinima] = useState('');
+
+  // Calcular fecha mínima permitida (día siguiente)
+  useEffect(() => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    // Formato YYYY-MM-DDTHH:MM requerido por input datetime-local
+    const minDate = tomorrow.toISOString().slice(0, 16);
+    setFechaMinima(minDate);
+  }, []);
 
   // Cargar tipos de trámite
   useEffect(() => {
@@ -37,6 +50,24 @@ const CrearTramite = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'fechaHora' && value) {
+      // Validar que la hora esté entre 10:00 AM y 10:00 PM
+      const date = new Date(value);
+      const hour = date.getHours();
+      
+      if (hour < 10 || hour >= 22) {
+        setMensaje('Las citas solo pueden programarse entre 10:00 AM y 10:00 PM');
+        setTipoMensaje('error');
+        return;
+      }
+      
+      // Limpiar mensaje de error si la hora es válida
+      if (mensaje && mensaje.includes('10:00 AM y 10:00 PM')) {
+        setMensaje('');
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -45,6 +76,20 @@ const CrearTramite = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validar que la fecha sea futura y dentro del horario permitido
+    if (formData.fechaHora) {
+      const selectedDate = new Date(formData.fechaHora);
+      const hour = selectedDate.getHours();
+      
+      // Validar que la hora esté entre 10:00 AM y 10:00 PM
+      if (hour < 10 || hour >= 22) {
+        setMensaje('Las citas solo pueden programarse entre 10:00 AM y 10:00 PM');
+        setTipoMensaje('error');
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     try {
@@ -120,6 +165,7 @@ const CrearTramite = () => {
                     required
                     className="block w-full pl-4 pr-10 py-3 text-base border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     disabled={isLoading}
+                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
                   >
                     <option value="">Selecciona un tipo de trámite</option>
                     {tiposTramite.map((tipo) => (
@@ -128,10 +174,9 @@ const CrearTramite = () => {
                       </option>
                     ))}
                   </select>
+                  {/* Agregamos la flecha como un elemento absoluto dentro del div relativo */}
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
+                    <ChevronDown className="h-5 w-5" />
                   </div>
                 </div>
               </div>
@@ -150,9 +195,14 @@ const CrearTramite = () => {
                     value={formData.fechaHora}
                     onChange={handleChange}
                     required
+                    min={fechaMinima}
                     className="block w-full pl-12 pr-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     disabled={isLoading}
                   />
+                </div>
+                <div className="mt-2 flex items-center text-sm text-gray-600">
+                  <Clock className="h-4 w-4 mr-1 text-blue-500" />
+                  <span>Solo es posible agendar citas para días futuros, entre 10:00 AM y 10:00 PM</span>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">Selecciona una fecha y hora disponible para tu cita</p>
               </div>
