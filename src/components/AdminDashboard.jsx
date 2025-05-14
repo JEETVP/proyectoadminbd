@@ -3,17 +3,20 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import { useNavigate } from 'react-router-dom';
+import axios from "axios";
+// Importar el componente TramitesAdmin
+import TramitesAdmin from "./TramitesAdmin"; // Asegúrate de que la ruta de importación sea correcta
 
 const AdminDashboard = () => {
   // URL base de la API
   const API_BASE_URL = "https://backendbernyfix.onrender.com/api";
-  
+
   // Estado para mostrar/ocultar los modales
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [showCreateTramiteForm, setShowCreateTramiteForm] = useState(false);
   const [showEditCitaForm, setShowEditCitaForm] = useState(false);
   const [editCitaId, setEditCitaId] = useState(null);
-  
+
   // Estados para almacenar datos de la API
   const [usuarios, setUsuarios] = useState([]);
   const [tramites, setTramites] = useState([]);
@@ -184,10 +187,22 @@ const AdminDashboard = () => {
 
   const handleShowEditCitaForm = (cita) => {
     setEditCitaId(cita._id);
+    // Note: This formatting logic for datetime-local input might need adjustment
+    // based on how your backend stores and returns dates (UTC vs Local).
+    // The format 'YYYY-MM-DDTHH:mm' is expected by datetime-local.
+    // If cita.fechaHora is UTC, new Date().toISOString().slice(0, 16) will give UTC time string,
+    // which the input will incorrectly interpret as local.
+    // A better approach for display is to get local components (getFullYear, getMonth, etc.)
+    // as was done in the corrected TramitesAdmin component.
+    const dateObj = cita.fechaHora ? new Date(cita.fechaHora) : null;
+    const fechaHoraLocalString = dateObj
+      ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}T${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
+      : "";
+
     setEditCita({
       usuario_id: cita.usuario_id || "",
       tramite_id: cita.tramite_id || "",
-      fechaHora: cita.fechaHora ? new Date(cita.fechaHora).toISOString().slice(0, 16) : "",
+      fechaHora: fechaHoraLocalString, // Use the local time string for display
       estado: cita.estado || "programada"
     });
     setShowEditCitaForm(true);
@@ -210,7 +225,7 @@ const AdminDashboard = () => {
   // Manejador de cambio para el formulario de trámite (actualizado)
   const handleTramiteChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Para campos anidados en tipoTramite o cita
     if (name.startsWith("tipoTramite.")) {
       const field = name.split(".")[1];
@@ -279,7 +294,7 @@ const AdminDashboard = () => {
     setIsLoading(prev => ({ ...prev, usuarios: true }));
     try {
       const token = localStorage.getItem("token");
-      
+
       // Formatear datos del usuario
       const userData = {
         numeroIdentificacion: newUsuario.numeroIdentificacion,
@@ -303,7 +318,7 @@ const AdminDashboard = () => {
       });
 
       if (!response.ok) throw new Error("Error al crear usuario");
-      
+
       const data = await response.json();
       setUsuarios([...usuarios, data]);
       setNewUsuario({
@@ -330,7 +345,7 @@ const AdminDashboard = () => {
     setIsLoading(prev => ({ ...prev, tramites: true }));
     try {
       const token = localStorage.getItem("token");
-      
+
       // Crear solo el tipo de trámite
       const tipoTramiteData = {
         nombre: newTramite.tipoTramite.nombre,
@@ -338,9 +353,9 @@ const AdminDashboard = () => {
         dependencia_id: newTramite.tipoTramite.dependencia_id,
         requisitos: newTramite.tipoTramite.requisitos
       };
-      
+
       console.log("Datos del tipo de trámite a crear:", tipoTramiteData);
-      
+
       const tipoTramiteResponse = await fetch(`${API_BASE_URL}/tipotramites`, {
         method: "POST",
         headers: {
@@ -349,15 +364,15 @@ const AdminDashboard = () => {
         },
         body: JSON.stringify(tipoTramiteData)
       });
-      
+
       if (!tipoTramiteResponse.ok) {
         const errorData = await tipoTramiteResponse.json();
         throw new Error(`Error al crear tipo de trámite: ${errorData.mensaje || 'Error desconocido'}`);
       }
-      
+
       const tipoTramiteResult = await tipoTramiteResponse.json();
       console.log("Tipo de trámite creado exitosamente:", tipoTramiteResult);
-      
+
       // Resetear el formulario
       setNewTramite({
         codigoTramite: "",
@@ -375,10 +390,10 @@ const AdminDashboard = () => {
           estado: "programada"
         }
       });
-      
+
       handleHideCreateTramiteForm();
       setError("");
-      
+
       // Recargar los tipos de trámite
       const reloadResponse = await fetch(`${API_BASE_URL}/tipotramites`, {
         headers: {
@@ -389,7 +404,7 @@ const AdminDashboard = () => {
         const data = await reloadResponse.json();
         setTiposTramite(data);
       }
-      
+
     } catch (error) {
       console.error("Error al crear tipo de trámite:", error);
       setError("No se pudo crear el tipo de trámite: " + error.message);
@@ -404,18 +419,32 @@ const AdminDashboard = () => {
     setIsLoading(prev => ({ ...prev, citas: true }));
     try {
       const token = localStorage.getItem("token");
-      
-      // Determinar si estamos creando o actualizando una cita
+
+      // Convert the local time string from the input to UTC before sending
+      let fechaHoraUtcString = null;
+      if (editCita.fechaHora) {
+         const localDate = new Date(editCita.fechaHora);
+         if (isNaN(localDate.getTime())) {
+             setError('Formato de fecha y hora inválido.');
+             console.error('Invalid date selected:', editCita.fechaHora);
+             setIsLoading(prev => ({ ...prev, citas: false })); // Stop loading
+             return; // Stop submission
+         }
+         fechaHoraUtcString = localDate.toISOString();
+      }
+
+
+      // Determine if estamos creating or updating a cita
       if (editCitaId) {
         // EDITAR: Actualizar cita existente
         console.log(`Actualizando cita ID: ${editCitaId}`);
         console.log('Datos de la cita:', editCita);
-        
+
         // Intentar con varias rutas de API posibles
         // 1. Ruta genérica de API REST
         const url = `${API_BASE_URL}/citas/${editCitaId}`;
         console.log(`Intentando actualizar cita con URL: ${url}`);
-        
+
         const response = await fetch(url, {
           method: "PUT",
           headers: {
@@ -425,7 +454,8 @@ const AdminDashboard = () => {
           body: JSON.stringify({
             usuario_id: editCita.usuario_id,
             tramite_id: editCita.tramite_id,
-            fechaHora: editCita.fechaHora,
+            // Send the UTC string
+            fechaHora: fechaHoraUtcString,
             estado: editCita.estado
           })
         });
@@ -434,15 +464,15 @@ const AdminDashboard = () => {
         if (!response.ok) {
           const errorMsg = `Error ${response.status}: ${response.statusText}`;
           console.error(`Error al actualizar cita: ${errorMsg}`);
-          
+
           if (response.status === 404) {
             // Si hay un 404, intentar con una URL alternativa
             console.log("La primera ruta no funcionó, intentando con ruta alternativa...");
-            
+
             // 2. Intentar con una URL alternativa si la primera falla
             const altUrl = `${API_BASE_URL}/citas/update/${editCitaId}`;
             console.log(`Intentando actualizar con URL alternativa: ${altUrl}`);
-            
+
             const altResponse = await fetch(altUrl, {
               method: "PUT",
               headers: {
@@ -452,21 +482,22 @@ const AdminDashboard = () => {
               body: JSON.stringify({
                 usuario_id: editCita.usuario_id,
                 tramite_id: editCita.tramite_id,
-                fechaHora: editCita.fechaHora,
+                // Send the UTC string
+                fechaHora: fechaHoraUtcString,
                 estado: editCita.estado
               })
             });
-            
+
             if (!altResponse.ok) {
               const altErrorMsg = `Error ${altResponse.status}: ${altResponse.statusText}`;
               console.error(`Error con ruta alternativa: ${altErrorMsg}`);
-              
+
               throw new Error(`No se pudo actualizar la cita. Por favor contacta al administrador del sistema.`);
             }
-            
+
             const data = await altResponse.json();
             console.log('Cita actualizada con éxito usando ruta alternativa:', data);
-            
+
             // Actualizar la lista de citas
             setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
           } else {
@@ -484,14 +515,14 @@ const AdminDashboard = () => {
           // La primera URL funcionó
           const data = await response.json();
           console.log('Cita actualizada con éxito:', data);
-          
+
           // Actualizar la lista de citas
           setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
         }
       } else {
         // CREAR: Nueva cita
         console.log('Creando nueva cita con datos:', editCita);
-        
+
         const response = await fetch(`${API_BASE_URL}/citas`, {
           method: "POST",
           headers: {
@@ -501,7 +532,8 @@ const AdminDashboard = () => {
           body: JSON.stringify({
             usuario_id: editCita.usuario_id,
             tramite_id: editCita.tramite_id,
-            fechaHora: editCita.fechaHora,
+             // Send the UTC string
+            fechaHora: fechaHoraUtcString,
             estado: editCita.estado
           })
         });
@@ -511,7 +543,7 @@ const AdminDashboard = () => {
           const errorMsg = `Error ${response.status}: ${response.statusText}`;
           // Clonar la respuesta antes de intentar leerla
           const clonedResponse = response.clone();
-          
+
           try {
             const errorData = await clonedResponse.json();
             throw new Error(errorData.mensaje || errorData.message || errorMsg);
@@ -520,14 +552,14 @@ const AdminDashboard = () => {
             throw new Error(errorMsg);
           }
         }
-        
+
         const data = await response.json();
         console.log('Cita creada con éxito:', data);
-        
+
         // Agregar la nueva cita a la lista
         setCitas([...citas, data]);
       }
-      
+
       // Limpiar mensaje de error y cerrar el formulario
       setError("");
       handleHideEditCitaForm();
@@ -542,11 +574,11 @@ const AdminDashboard = () => {
   // Eliminar una cita
   const eliminarCita = async (citaId) => {
     if (!window.confirm("¿Está seguro de que desea eliminar esta cita?")) return;
-    
+
     setIsLoading(prev => ({ ...prev, citas: true }));
     try {
       const token = localStorage.getItem("token");
-      
+
       const response = await fetch(`${API_BASE_URL}/citas/${citaId}`, {
         method: "DELETE",
         headers: {
@@ -555,7 +587,7 @@ const AdminDashboard = () => {
       });
 
       if (!response.ok) throw new Error("Error al eliminar cita");
-      
+
       setCitas(citas.filter(cita => cita._id !== citaId));
     } catch (error) {
       console.error("Error al eliminar cita:", error);
@@ -596,8 +628,12 @@ const AdminDashboard = () => {
   // Función para formatear la fecha
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return 'Fecha no disponible';
-    return new Date(fechaStr).toLocaleString();
+    const date = new Date(fechaStr);
+    // Check for invalid date
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+    return date.toLocaleString(); // Displays date and time in user's local format
   };
+
 
   // Función para obtener la clase de color según el estado del trámite
   const getEstadoColor = (estado) => {
@@ -619,10 +655,10 @@ const AdminDashboard = () => {
   return (
     <div className="bg-[#F5F5F5] min-h-screen flex flex-col">
       <Navbar />
-     
+
 
       <main className="flex-1 p-8">
-        
+
         <h1 className="text-2xl font-bold mb-4 text-[#003366]">Dashboard de Administrador</h1>
 
         {error && (
@@ -630,7 +666,7 @@ const AdminDashboard = () => {
             <p>{error}</p>
           </div>
         )}
-        
+
         {/* Sección de Métricas */}
         <div className="mb-8">
           <h2 className="text-lg font-bold mb-4 text-[#003366]">Métricas</h2>
@@ -653,120 +689,54 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-                
-        {/* Sección de Trámites del Sistema */}
-        <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4 text-[#003366]">Trámites del Sistema</h2>
-          {isLoading.tramites ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
-            </div>
-          ) : tramites.length === 0 ? (
-            <div className="bg-blue-50 p-4 rounded text-center">
-              <p className="text-blue-700">No hay trámites registrados en el sistema.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white">
-                <thead>
-                  <tr>
-                    <th className="border border-gray-300 px-4 py-2">Código</th>
-                    <th className="border border-gray-300 px-4 py-2">Usuario</th>
-                    <th className="border border-gray-300 px-4 py-2">Tipo de Trámite</th>
-                    <th className="border border-gray-300 px-4 py-2">Fecha de Creación</th>
-                    <th className="border border-gray-300 px-4 py-2">Fecha de Cita</th>
-                    <th className="border border-gray-300 px-4 py-2">Estado</th>
-                    <th className="border border-gray-300 px-4 py-2">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tramites.map((tramite) => (
-                    <tr key={tramite._id}>
-                      <td className="border border-gray-300 px-4 py-2">{tramite.codigoTramite || 'Sin código'}</td>
-                      <td className="border border-gray-300 px-4 py-2">{getNombreUsuario(tramite.usuario_id)}</td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {getNombreTipoTramite(tramite.tipoTramite_id)}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {tramite.createdAt ? formatearFecha(tramite.createdAt) : 'No disponible'}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {tramite.cita && tramite.cita.fechaHora ? formatearFecha(tramite.cita.fechaHora) : 'No asignada'}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getEstadoColor(tramite.estado)}`}>
-                          {tramite.estado || 'Pendiente'}
-                        </span>
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Buscar la cita asociada a este trámite
-                            const citaDelTramite = citas.find(c => c.tramite_id === tramite._id);
-                            if (citaDelTramite) {
-                              // Si la cita existe, editar la cita existente
-                              handleShowEditCitaForm(citaDelTramite);
-                            } else {
-                              // Si no existe cita, crear una nueva con los datos del trámite
-                              setEditCitaId(null);
-                              setEditCita({
-                                usuario_id: tramite.usuario_id || "",
-                                tramite_id: tramite._id || "",
-                                fechaHora: tramite.cita?.fechaHora ? new Date(tramite.cita.fechaHora).toISOString().slice(0, 16) : "",
-                                estado: tramite.cita?.estado || "programada"
-                              });
-                              setShowEditCitaForm(true);
-                            }
-                          }}
-                          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                          disabled={isLoading.tramites}
-                        >
-                          Editar Cita
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+
+        
 
         {/* Botones para Crear Usuario y Trámite */}
-<div className="mb-8 flex flex-col sm:flex-row gap-4 sm:justify-center">
-  <button
-    onClick={handleShowCreateUserForm}
-    className="bg-[#CC9900] hover:bg-[#B38600] text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300"
-  >
-    Crear Usuario
-  </button>
+        <div className="mb-8 flex flex-col sm:flex-row gap-4 sm:justify-center">
+          <button
+            onClick={handleShowCreateUserForm}
+            className="bg-[#CC9900] hover:bg-[#B38600] text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300"
+          >
+            Crear Usuario
+          </button>
 
-  <button
-    onClick={() => navigate('/view')}
-    className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
-  >
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-    </svg>
-    <span>Ver Usuarios</span>
-  </button>
+          <button
+            onClick={() => navigate('/view')}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span>Ver Usuarios</span>
+          </button>
 
-  <button
-    onClick={() => navigate('/crear-tipo-tramite')}
-    className="bg-green-600 hover:bg-green-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
-  >
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-    </svg>
-    <span>Crear Trámite</span>
-  </button>
-</div>
+           {/* Nuevo botón para acceder a TramitesAdmin */}
+           <button
+            onClick={() => navigate('/ayuda')} 
+            className="bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
+          >
+             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17.25v-4.5M9 12H3l0-2.25a4.5 4.5 0 011.172-2.828 4.5 4.5 0 012.573-1.172H15c2.209 0 4 1.791 4 4v4.5c0 .828-.672 1.5-1.5 1.5h-1.5M9 12h6m-6 0H3m9 6h6m-3 3l3-3m0 0l-3-3"></path> {/* Icono de gestión o lista */}
+            </svg>
+            <span>Gestionar Trámites</span>
+          </button>
+
+           {/* Botón original para Crear Trámite (Tipo de Trámite) */}
+          <button
+            onClick={() => navigate('/crear-tipo-tramite')} // Asumo que esta ruta es para crear TIPOS de trámite
+            className="bg-green-600 hover:bg-green-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Crear Tipo Trámite</span>
+          </button>
+        </div>
 
 
-        
-        
+
 
         {/* Formulario de Crear Usuario (Modal) */}
         {showCreateUserForm && (
@@ -969,7 +939,7 @@ const AdminDashboard = () => {
                         </select>
                       )}
                     </div>
-                    
+
                     {/* Requisitos */}
                     <div>
                       <label className="block text-sm font-medium text-[#003366] mb-2">
