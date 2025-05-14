@@ -411,7 +411,12 @@ const AdminDashboard = () => {
         console.log(`Actualizando cita ID: ${editCitaId}`);
         console.log('Datos de la cita:', editCita);
         
-        const response = await fetch(`${API_BASE_URL}/citas/${editCitaId}`, {
+        // Intentar con varias rutas de API posibles
+        // 1. Ruta genérica de API REST
+        const url = `${API_BASE_URL}/citas/${editCitaId}`;
+        console.log(`Intentando actualizar cita con URL: ${url}`);
+        
+        const response = await fetch(url, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -427,25 +432,62 @@ const AdminDashboard = () => {
 
         // Manejar error si la respuesta no es exitosa
         if (!response.ok) {
-          // Intentar obtener detalles del error
-          let errorMsg = `Error ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            errorMsg = errorData.mensaje || errorData.message || errorMsg;
-          } catch (jsonError) {
-            console.error("Error al parsear respuesta:", jsonError);
-            // Si falla al parsear JSON, intentar obtener el texto
-            const text = await response.text();
-            console.error("Respuesta recibida:", text);
+          const errorMsg = `Error ${response.status}: ${response.statusText}`;
+          console.error(`Error al actualizar cita: ${errorMsg}`);
+          
+          if (response.status === 404) {
+            // Si hay un 404, intentar con una URL alternativa
+            console.log("La primera ruta no funcionó, intentando con ruta alternativa...");
+            
+            // 2. Intentar con una URL alternativa si la primera falla
+            const altUrl = `${API_BASE_URL}/citas/update/${editCitaId}`;
+            console.log(`Intentando actualizar con URL alternativa: ${altUrl}`);
+            
+            const altResponse = await fetch(altUrl, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                usuario_id: editCita.usuario_id,
+                tramite_id: editCita.tramite_id,
+                fechaHora: editCita.fechaHora,
+                estado: editCita.estado
+              })
+            });
+            
+            if (!altResponse.ok) {
+              const altErrorMsg = `Error ${altResponse.status}: ${altResponse.statusText}`;
+              console.error(`Error con ruta alternativa: ${altErrorMsg}`);
+              
+              throw new Error(`No se pudo actualizar la cita. Por favor contacta al administrador del sistema.`);
+            }
+            
+            const data = await altResponse.json();
+            console.log('Cita actualizada con éxito usando ruta alternativa:', data);
+            
+            // Actualizar la lista de citas
+            setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
+          } else {
+            // Para otros errores distintos a 404
+            const clonedResponse = response.clone();
+            try {
+              const errorData = await clonedResponse.json();
+              throw new Error(errorData.mensaje || errorData.message || errorMsg);
+            } catch (jsonError) {
+              console.error("Error al parsear respuesta:", jsonError);
+              throw new Error(errorMsg);
+            }
           }
-          throw new Error(errorMsg);
+        } else {
+          // La primera URL funcionó
+          const data = await response.json();
+          console.log('Cita actualizada con éxito:', data);
+          
+          // Actualizar la lista de citas
+          setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
         }
-        
-        const data = await response.json();
-        console.log('Cita actualizada con éxito:', data);
-        
-        // Actualizar la lista de citas
-        setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
       } else {
         // CREAR: Nueva cita
         console.log('Creando nueva cita con datos:', editCita);
@@ -466,17 +508,17 @@ const AdminDashboard = () => {
 
         // Manejar error si la respuesta no es exitosa
         if (!response.ok) {
-          // Intentar obtener detalles del error
-          let errorMsg = `Error ${response.status}: ${response.statusText}`;
+          const errorMsg = `Error ${response.status}: ${response.statusText}`;
+          // Clonar la respuesta antes de intentar leerla
+          const clonedResponse = response.clone();
+          
           try {
-            const errorData = await response.json();
-            errorMsg = errorData.mensaje || errorData.message || errorMsg;
+            const errorData = await clonedResponse.json();
+            throw new Error(errorData.mensaje || errorData.message || errorMsg);
           } catch (jsonError) {
             console.error("Error al parsear respuesta:", jsonError);
-            const text = await response.text();
-            console.error("Respuesta recibida:", text);
+            throw new Error(errorMsg);
           }
-          throw new Error(errorMsg);
         }
         
         const data = await response.json();
@@ -602,7 +644,7 @@ const AdminDashboard = () => {
               </span>
             </div>
             <div className="bg-white shadow rounded p-4 text-center">
-              <h3 className="text-xl font-medium mb-2">Número de Trámites</h3>
+              <h3 className="text-xl font-medium mb-2">Número de Citas</h3>
               <span id="num-tramites" className="text-2xl font-bold">
                 {isLoading.tramites ? (
                   <div className="animate-pulse h-8 w-16 bg-gray-200 mx-auto rounded"></div>
