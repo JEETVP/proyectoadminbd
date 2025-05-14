@@ -692,32 +692,39 @@ const AdminDashboard = () => {
         </div>
 
         {/* Botones para Crear Usuario y Trámite */}
-        <div className="mb-8">
-          <button
-            onClick={handleShowCreateUserForm}
-            className="bg-[#CC9900] hover:bg-[#B38600] text-white font-bold py-2 px-4 rounded"
-          >
-            Crear Usuario
-          </button>
-          &nbsp;
-          <button
-            onClick={handleShowCreateTramiteForm}
-            className="bg-[#CC9900] hover:bg-[#B38600] text-white font-bold py-2 px-4 rounded"
-          >
-            Crear Trámite
-          </button>
+<div className="mb-8 flex flex-col sm:flex-row gap-4 sm:justify-center">
+  <button
+    onClick={handleShowCreateUserForm}
+    className="bg-[#CC9900] hover:bg-[#B38600] text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300"
+  >
+    Crear Usuario
+  </button>
 
-          <button
-  onClick={() => navigate('/view')}
-  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow transition-colors duration-200 flex items-center gap-1"
->
-  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-  </svg>
-  <span>Ver Usuarios</span>
-</button>
-        </div>
+  <button
+    onClick={() => navigate('/view')}
+    className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
+  >
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+    <span>Ver Usuarios</span>
+  </button>
+
+  <button
+    onClick={() => navigate('/crear-tipo-tramite')}
+    className="bg-green-600 hover:bg-green-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center gap-2 justify-center"
+  >
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+    <span>Crear Trámite</span>
+  </button>
+</div>
+
+
+        
+        
 
         {/* Formulario de Crear Usuario (Modal) */}
         {showCreateUserForm && (

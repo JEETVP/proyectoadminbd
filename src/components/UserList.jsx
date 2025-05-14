@@ -157,7 +157,7 @@ const UserList = () => {
           className="mb-4 inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition-colors"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
-          Regresar a Usuarios
+          Volver al Dashboard
         </button>
       
         <div className="bg-white rounded-xl shadow-md p-6">
