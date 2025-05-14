@@ -46,7 +46,7 @@ const AdminDashboard = () => {
     tipoTramite: {
       nombre: "",
       descripcion: "",
-      dependencia_id: "",
+      dependencia_id: "", // Cambiado de dependencia a dependencia_id
       requisitos: []
     },
     estado: "pendiente",
@@ -114,14 +114,45 @@ const AdminDashboard = () => {
     // Cargar dependencias
     const cargarDependencias = async () => {
       try {
+        setIsLoading(prev => ({ ...prev, dependencias: true }));
+        const token = localStorage.getItem("token");
+        
+        if (!token) {
+          throw new Error("No se encontró token de autenticación");
+        }
+        
+        console.log("Cargando dependencias...");
         const response = await fetch(`${API_BASE_URL}/dependencias`, {
-          headers: config.headers
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
-        if (!response.ok) throw new Error("Error al cargar dependencias");
+        
+        if (!response.ok) {
+          // Intentar obtener el mensaje de error del servidor
+          let errorMsg = `Error ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.mensaje || errorMsg;
+          } catch (e) {
+            // Si falla al parsear JSON, intentar obtener el texto
+            const errorText = await response.text();
+            console.error("Respuesta de error:", errorText);
+          }
+          throw new Error(errorMsg);
+        }
+        
         const data = await response.json();
+        console.log("Dependencias cargadas:", data);
+        
+        if (!Array.isArray(data)) {
+          throw new Error("El formato de respuesta de dependencias no es un array");
+        }
+        
         setDependencias(data);
       } catch (error) {
         console.error("Error al cargar dependencias:", error);
+        setError(`Error al cargar dependencias: ${error.message}`);
       } finally {
         setIsLoading(prev => ({ ...prev, dependencias: false }));
       }
@@ -160,7 +191,7 @@ const AdminDashboard = () => {
     };
 
     cargarUsuarios();
-    cargarDependencias();
+    cargarDependencias(); // Carga dependencias primero
     cargarTiposTramite();
     cargarTramites();
     cargarCitas();
@@ -332,13 +363,15 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem("token");
       
-      // Primero crear el tipo de trámite
+      // Crear solo el tipo de trámite
       const tipoTramiteData = {
         nombre: newTramite.tipoTramite.nombre,
         descripcion: newTramite.tipoTramite.descripcion,
-        dependencia_id: newTramite.tipoTramite.dependencia_id,
+        dependencia_id: newTramite.tipoTramite.dependencia_id, // Cambiado de dependencia a dependencia_id
         requisitos: newTramite.tipoTramite.requisitos
       };
+      
+      console.log("Datos del tipo de trámite a crear:", tipoTramiteData);
       
       const tipoTramiteResponse = await fetch(`${API_BASE_URL}/tipotramites`, {
         method: "POST",
@@ -349,41 +382,22 @@ const AdminDashboard = () => {
         body: JSON.stringify(tipoTramiteData)
       });
       
-      if (!tipoTramiteResponse.ok) throw new Error("Error al crear tipo de trámite");
+      if (!tipoTramiteResponse.ok) {
+        const errorData = await tipoTramiteResponse.json();
+        throw new Error(`Error al crear tipo de trámite: ${errorData.mensaje || 'Error desconocido'}`);
+      }
       
       const tipoTramiteResult = await tipoTramiteResponse.json();
+      console.log("Tipo de trámite creado exitosamente:", tipoTramiteResult);
       
-      // Ahora crear el trámite con el ID del tipo de trámite recién creado
-      const tramiteData = {
-        codigoTramite: newTramite.codigoTramite,
-        usuario_id: newTramite.usuario_id,
-        tipoTramite_id: tipoTramiteResult._id,
-        estado: newTramite.estado,
-        documentos: newTramite.documentos,
-        cita: newTramite.cita
-      };
-      
-      const tramiteResponse = await fetch(`${API_BASE_URL}/tramites`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(tramiteData)
-      });
-      
-      if (!tramiteResponse.ok) throw new Error("Error al crear trámite");
-      
-      const tramiteResult = await tramiteResponse.json();
-      
-      setTramites([...tramites, tramiteResult]);
+      // Resetear el formulario
       setNewTramite({
         codigoTramite: "",
         usuario_id: "",
         tipoTramite: {
           nombre: "",
           descripcion: "",
-          dependencia_id: "",
+          dependencia_id: "", // Cambiado de dependencia a dependencia_id
           requisitos: []
         },
         estado: "pendiente",
@@ -393,11 +407,24 @@ const AdminDashboard = () => {
           estado: "programada"
         }
       });
+      
       handleHideCreateTramiteForm();
+      setError("");
+      
+      // Recargar los tipos de trámite
+      const reloadResponse = await fetch(`${API_BASE_URL}/tipotramites`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (reloadResponse.ok) {
+        const data = await reloadResponse.json();
+        setTiposTramite(data);
+      }
       
     } catch (error) {
-      console.error("Error al crear trámite:", error);
-      setError("No se pudo crear el trámite: " + error.message);
+      console.error("Error al crear tipo de trámite:", error);
+      setError("No se pudo crear el tipo de trámite: " + error.message);
     } finally {
       setIsLoading(prev => ({ ...prev, tramites: false }));
     }
@@ -410,23 +437,93 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch(`${API_BASE_URL}/citas/${editCitaId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(editCita)
-      });
+      // Determinar si estamos creando o actualizando una cita
+      if (editCitaId) {
+        // EDITAR: Actualizar cita existente
+        console.log(`Actualizando cita ID: ${editCitaId}`);
+        console.log('Datos de la cita:', editCita);
+        
+        const response = await fetch(`${API_BASE_URL}/citas/${editCitaId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            usuario_id: editCita.usuario_id,
+            tramite_id: editCita.tramite_id,
+            fechaHora: editCita.fechaHora,
+            estado: editCita.estado
+          })
+        });
 
-      if (!response.ok) throw new Error("Error al actualizar cita");
+        // Manejar error si la respuesta no es exitosa
+        if (!response.ok) {
+          // Intentar obtener detalles del error
+          let errorMsg = `Error ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.mensaje || errorData.message || errorMsg;
+          } catch (jsonError) {
+            console.error("Error al parsear respuesta:", jsonError);
+            // Si falla al parsear JSON, intentar obtener el texto
+            const text = await response.text();
+            console.error("Respuesta recibida:", text);
+          }
+          throw new Error(errorMsg);
+        }
+        
+        const data = await response.json();
+        console.log('Cita actualizada con éxito:', data);
+        
+        // Actualizar la lista de citas
+        setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
+      } else {
+        // CREAR: Nueva cita
+        console.log('Creando nueva cita con datos:', editCita);
+        
+        const response = await fetch(`${API_BASE_URL}/citas`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            usuario_id: editCita.usuario_id,
+            tramite_id: editCita.tramite_id,
+            fechaHora: editCita.fechaHora,
+            estado: editCita.estado
+          })
+        });
+
+        // Manejar error si la respuesta no es exitosa
+        if (!response.ok) {
+          // Intentar obtener detalles del error
+          let errorMsg = `Error ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.mensaje || errorData.message || errorMsg;
+          } catch (jsonError) {
+            console.error("Error al parsear respuesta:", jsonError);
+            const text = await response.text();
+            console.error("Respuesta recibida:", text);
+          }
+          throw new Error(errorMsg);
+        }
+        
+        const data = await response.json();
+        console.log('Cita creada con éxito:', data);
+        
+        // Agregar la nueva cita a la lista
+        setCitas([...citas, data]);
+      }
       
-      const data = await response.json();
-      setCitas(citas.map(cita => cita._id === editCitaId ? data : cita));
+      // Limpiar mensaje de error y cerrar el formulario
+      setError("");
       handleHideEditCitaForm();
     } catch (error) {
-      console.error("Error al actualizar cita:", error);
-      setError("No se pudo actualizar la cita");
+      console.error("Error al gestionar cita:", error);
+      setError(`No se pudo gestionar la cita: ${error.message}`);
     } finally {
       setIsLoading(prev => ({ ...prev, citas: false }));
     }
@@ -793,47 +890,6 @@ const AdminDashboard = () => {
             <div className="bg-white p-6 rounded shadow max-w-2xl w-full h-[90vh] overflow-y-auto">
               <h2 className="text-lg font-bold mb-4 text-[#003366]">Crear Trámite</h2>
               <form onSubmit={crearTramite} className="space-y-4">
-                {/* Sección de código y usuario */}
-                <div className="bg-blue-50 p-4 rounded-md mb-4">
-                  <h3 className="text-md font-medium mb-3 text-blue-800">Información General</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="codigoTramite" className="block text-sm font-medium text-[#003366]">
-                        Código de Trámite:
-                      </label>
-                      <input
-                        type="text"
-                        id="codigoTramite"
-                        name="codigoTramite"
-                        value={newTramite.codigoTramite}
-                        onChange={handleTramiteChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="usuario_id" className="block text-sm font-medium text-[#003366]">
-                        Usuario:
-                      </label>
-                      <select
-                        id="usuario_id"
-                        name="usuario_id"
-                        value={newTramite.usuario_id}
-                        onChange={handleTramiteChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                        required
-                      >
-                        <option value="">Selecciona un usuario</option>
-                        {usuarios.map((usuario) => (
-                          <option key={usuario._id} value={usuario._id}>
-                            {usuario.nombre} {usuario.apellidos} - {usuario.contacto?.email || 'Sin email'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
                 {/* Sección de tipo de trámite */}
                 <div className="bg-green-50 p-4 rounded-md mb-4">
                   <h3 className="text-md font-medium mb-3 text-green-800">Tipo de Trámite</h3>
@@ -869,16 +925,32 @@ const AdminDashboard = () => {
                       <label htmlFor="tipoTramite.dependencia_id" className="block text-sm font-medium text-[#003366]">
                         Dependencia:
                       </label>
-                      <input
-                        type="text"
-                        id="tipoTramite.dependencia_id"
-                        name="tipoTramite.dependencia_id"
-                        value={newTramite.tipoTramite.dependencia_id}
-                        onChange={handleTramiteChange}
-                        placeholder="Escriba el nombre de la dependencia"
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                        required
-                      />
+                      {isLoading.dependencias ? (
+                        <div className="mt-1 flex items-center">
+                          <div className="animate-spin h-5 w-5 mr-2 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                          <span className="text-sm text-gray-500">Cargando dependencias...</span>
+                        </div>
+                      ) : dependencias.length === 0 ? (
+                        <div className="mt-1 text-sm text-red-500">
+                          No se pudieron cargar las dependencias. Por favor, intente de nuevo.
+                        </div>
+                      ) : (
+                        <select
+                          id="tipoTramite.dependencia_id"
+                          name="tipoTramite.dependencia_id"
+                          value={newTramite.tipoTramite.dependencia_id}
+                          onChange={handleTramiteChange}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
+                          required
+                        >
+                          <option value="">Selecciona una dependencia</option>
+                          {dependencias.map((dependencia) => (
+                            <option key={dependencia._id} value={dependencia._id}>
+                              {dependencia.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                     
                     {/* Requisitos */}
@@ -918,132 +990,6 @@ const AdminDashboard = () => {
                           ))}
                         </ul>
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Estado del trámite */}
-                <div>
-                  <label htmlFor="estado" className="block text-sm font-medium text-[#003366]">
-                    Estado del Trámite:
-                  </label>
-                  <select
-                    id="estado"
-                    name="estado"
-                    value={newTramite.estado}
-                    onChange={handleTramiteChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                    required
-                  >
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_proceso">En Proceso</option>
-                    <option value="completado">Completado</option>
-                    <option value="rechazado">Rechazado</option>
-                  </select>
-                </div>
-
-                {/* Sección de documentos */}
-                <div className="bg-amber-50 p-4 rounded-md mb-4">
-                  <h3 className="text-md font-medium mb-3 text-amber-800">Documentos</h3>
-                  {newTramite.documentos.map((doc, index) => (
-                    <div key={index} className="mb-4 flex space-x-2">
-                      <div className="w-1/2">
-                        <label htmlFor={`tipo-${index}`} className="block text-sm font-medium text-[#003366]">
-                          Tipo de Documento:
-                        </label>
-                        <input
-                          type="text"
-                          id={`tipo-${index}`}
-                          name="tipo"
-                          placeholder="Ej: Identificación, Comprobante, etc."
-                          value={doc.tipo}
-                          onChange={(e) => {
-                            const updatedDocs = newTramite.documentos.map((d, i) =>
-                              i === index ? { ...d, tipo: e.target.value } : d
-                            );
-                            setNewTramite((prevData) => ({
-                              ...prevData,
-                              documentos: updatedDocs,
-                            }));
-                          }}
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                          required
-                        />
-                      </div>
-                      <div className="w-1/2">
-                        <label htmlFor={`archivo-${index}`} className="block text-sm font-medium text-[#003366]">
-                          Archivo:
-                        </label>
-                        <input
-                          type="file"
-                          id={`archivo-${index}`}
-                          name="archivo"
-                          onChange={(e) => {
-                            const updatedDocs = newTramite.documentos.map((d, i) =>
-                              i === index ? { ...d, archivo: e.target.files[0] } : d
-                            );
-                            setNewTramite((prevData) => ({
-                              ...prevData,
-                              documentos: updatedDocs,
-                            }));
-                          }}
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                          required
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDocument(index)}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mt-7"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addDocument}
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Agregar Documento
-                  </button>
-                </div>
-
-                {/* Sección de cita */}
-                <div className="bg-indigo-50 p-4 rounded-md mb-4">
-                  <h3 className="text-md font-medium mb-3 text-indigo-800">Información de la Cita</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="cita.fechaHora" className="block text-sm font-medium text-[#003366]">
-                        Fecha y Hora de la Cita:
-                      </label>
-                      <input
-                        type="datetime-local"
-                        id="cita.fechaHora"
-                        name="cita.fechaHora"
-                        value={newTramite.cita.fechaHora}
-                        onChange={handleTramiteChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="cita.estado" className="block text-sm font-medium text-[#003366]">
-                        Estado de la Cita:
-                      </label>
-                      <select
-                        id="cita.estado"
-                        name="cita.estado"
-                        value={newTramite.cita.estado}
-                        onChange={handleTramiteChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#CC9900] focus:border-[#CC9900] sm:text-sm"
-                        required
-                      >
-                        <option value="programada">Programada</option>
-                        <option value="completada">Completada</option>
-                        <option value="cancelada">Cancelada</option>
-                        <option value="no_asistio">No Asistió</option>
-                      </select>
                     </div>
                   </div>
                 </div>
