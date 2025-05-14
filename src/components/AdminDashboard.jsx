@@ -18,13 +18,25 @@ const AdminDashboard = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [tramites, setTramites] = useState([]);
   const [tiposTramite, setTiposTramite] = useState([]);
-  const [dependencias, setDependencias] = useState([]);
+  // Lista de dependencias con IDs en formato ObjectId hexadecimal válido para MongoDB
+  const [dependencias, setDependencias] = useState([
+    { _id: "6579b530e911a400d1249981", nombre: "Dirección General de Administración" },
+    { _id: "6579b530e911a400d1249982", nombre: "Secretaría de Finanzas" },
+    { _id: "6579b530e911a400d1249983", nombre: "Desarrollo Urbano" },
+    { _id: "6579b530e911a400d1249984", nombre: "Registro Civil" },
+    { _id: "6579b530e911a400d1249985", nombre: "Catastro" },
+    { _id: "6579b530e911a400d1249986", nombre: "Tesorería Municipal" },
+    { _id: "6579b530e911a400d1249987", nombre: "Obras Públicas" },
+    { _id: "6579b530e911a400d1249988", nombre: "Servicios Municipales" },
+    { _id: "6579b530e911a400d1249989", nombre: "Protección Civil" },
+    { _id: "6579b530e911a400d1249990", nombre: "Medio Ambiente" }
+  ]);
   const [citas, setCitas] = useState([]);
   const [isLoading, setIsLoading] = useState({
     usuarios: true,
     tramites: true,
     citas: true,
-    dependencias: true
+    dependencias: false // Cambiado a false porque ya tenemos dependencias hardcodeadas
   });
   const [error, setError] = useState("");
 
@@ -46,7 +58,7 @@ const AdminDashboard = () => {
     tipoTramite: {
       nombre: "",
       descripcion: "",
-      dependencia_id: "", // Cambiado de dependencia a dependencia_id
+      dependencia_id: "",
       requisitos: []
     },
     estado: "pendiente",
@@ -111,52 +123,8 @@ const AdminDashboard = () => {
       }
     };
 
-    // Cargar dependencias
-    const cargarDependencias = async () => {
-      try {
-        setIsLoading(prev => ({ ...prev, dependencias: true }));
-        const token = localStorage.getItem("token");
-        
-        if (!token) {
-          throw new Error("No se encontró token de autenticación");
-        }
-        
-        console.log("Cargando dependencias...");
-        const response = await fetch(`${API_BASE_URL}/dependencias`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          // Intentar obtener el mensaje de error del servidor
-          let errorMsg = `Error ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            errorMsg = errorData.mensaje || errorMsg;
-          } catch (e) {
-            // Si falla al parsear JSON, intentar obtener el texto
-            const errorText = await response.text();
-            console.error("Respuesta de error:", errorText);
-          }
-          throw new Error(errorMsg);
-        }
-        
-        const data = await response.json();
-        console.log("Dependencias cargadas:", data);
-        
-        if (!Array.isArray(data)) {
-          throw new Error("El formato de respuesta de dependencias no es un array");
-        }
-        
-        setDependencias(data);
-      } catch (error) {
-        console.error("Error al cargar dependencias:", error);
-        setError(`Error al cargar dependencias: ${error.message}`);
-      } finally {
-        setIsLoading(prev => ({ ...prev, dependencias: false }));
-      }
-    };
+    // Ya no necesitamos cargar dependencias desde la API
+    // porque estamos usando una lista hardcodeada
 
     // Cargar trámites
     const cargarTramites = async () => {
@@ -191,7 +159,7 @@ const AdminDashboard = () => {
     };
 
     cargarUsuarios();
-    cargarDependencias(); // Carga dependencias primero
+    // No cargar dependencias desde la API
     cargarTiposTramite();
     cargarTramites();
     cargarCitas();
@@ -367,7 +335,7 @@ const AdminDashboard = () => {
       const tipoTramiteData = {
         nombre: newTramite.tipoTramite.nombre,
         descripcion: newTramite.tipoTramite.descripcion,
-        dependencia_id: newTramite.tipoTramite.dependencia_id, // Cambiado de dependencia a dependencia_id
+        dependencia_id: newTramite.tipoTramite.dependencia_id,
         requisitos: newTramite.tipoTramite.requisitos
       };
       
@@ -397,7 +365,7 @@ const AdminDashboard = () => {
         tipoTramite: {
           nombre: "",
           descripcion: "",
-          dependencia_id: "", // Cambiado de dependencia a dependencia_id
+          dependencia_id: "",
           requisitos: []
         },
         estado: "pendiente",
